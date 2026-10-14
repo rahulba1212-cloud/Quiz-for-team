@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Join Team Detective Showdown</title>
+<style>
+:root{color-scheme:dark;--bg:#10141d;--panel:#18212d;--panel2:#202b38;--line:#3b4655;--text:#f6f1e8;--muted:#b9c1cc;--gold:#f0c66a;--green:#36bd83;--red:#ff747b;--amber:#f6b84c}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#293344 0,transparent 42%),var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{width:min(720px,100%);margin:0 auto;padding:20px 15px 40px}.brand{display:flex;gap:12px;align-items:center;padding:8px 0 18px;border-bottom:1px solid var(--line);margin-bottom:20px}.mark{width:48px;height:48px;display:grid;place-items:center;background:#2a251b;border:1px solid #75623a;border-radius:15px;font-size:25px}.brand h1{font-size:1.05rem;margin:0;letter-spacing:.04em}.brand p{font-size:.78rem;color:var(--muted);margin:3px 0 0}.panel{background:linear-gradient(155deg,rgba(29,42,56,.98),rgba(20,29,39,.98));border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 18px 45px #0004;margin-bottom:14px}.eyebrow{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:900}.panel h2{font-size:clamp(1.45rem,5vw,2rem);line-height:1.12;margin:7px 0 10px}.muted{color:var(--muted)}.field{display:grid;gap:6px;margin:12px 0}.field label{font-size:.88rem;font-weight:800}.field input,.field select{width:100%;min-width:0;border:1px solid #566575;background:#101923;color:var(--text);border-radius:11px;padding:13px;font:inherit}.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:12px;padding:12px 14px;font:inherit;font-weight:800;cursor:pointer;min-height:46px}.btn:focus-visible,.field input:focus-visible,.field select:focus-visible{outline:3px solid #fff2b8;outline-offset:2px}.primary{background:var(--gold);color:#201a0f;border-color:var(--gold)}.btn:disabled{opacity:.45;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.option{display:flex;align-items:flex-start;gap:10px;text-align:left;width:100%;min-height:75px}.letter{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:9px;background:#101923;border:1px solid #566575;font-weight:900;color:var(--gold)}.option.selected{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);background:#302a1e}.option.correct{border-color:var(--green);background:#15382d}.option.wrong{border-color:var(--red)}.status{padding:12px 13px;border-radius:12px;background:#101923;border:1px solid var(--line);margin-top:13px}.status.good{border-color:#2c8965;color:#a7f3d0}.status.bad{border-color:#a64b54;color:#ffc6ca}.pill{display:inline-flex;border:1px solid var(--line);border-radius:99px;padding:5px 9px;font-size:.74rem;font-weight:800;background:#101923;color:var(--gold)}.question-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.prompt{font-size:1.2rem;line-height:1.36;font-weight:800;margin:15px 0}.region{font-size:.78rem;color:var(--muted);margin:-6px 0 14px}.timer{font-variant-numeric:tabular-nums;font-size:1.1rem;font-weight:900}.hide{display:none!important}.foot{font-size:.77rem;color:var(--muted);text-align:center;margin-top:20px}.rule{height:1px;background:var(--line);margin:16px 0}@media(max-width:480px){.panel{padding:16px}.grid{grid-template-columns:1fr}.option{min-height:58px}.wrap{padding-left:11px;padding-right:11px}}
+</style>
+<script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="brand"><div class="mark" aria-hidden="true">🕵️</div><div><h1>TEAM DETECTIVE SHOWDOWN</h1><p>Mobile player portal · private answer entry</p></div></header>
+  <section id="joinPanel" class="panel">
+    <div class="eyebrow">Join the session</div><h2>Enter the case room</h2><p class="muted">Scan the host’s QR code or enter the six-digit room code. Select your registered name to connect your phone to your player slot.</p>
+    <div class="field"><label for="roomCode">Room code</label><input id="roomCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="e.g. 482193" aria-describedby="joinError"></div>
+    <button id="findRoom" class="btn primary" type="button">Find room</button>
+    <div id="playerPicker" class="hide"><div class="field"><label for="playerName">Your registered player name</label><select id="playerName"><option value="">Select your name…</option></select></div><button id="joinButton" class="btn primary" type="button">Join game</button></div>
+    <div id="joinError" class="status hide" role="status"></div>
+  </section>
+  <section id="gamePanel" class="hide">
+    <div class="panel"><div class="question-top"><span id="roundBadge" class="pill">Waiting for host</span><span id="timer" class="timer">--:--</span></div><h2 id="gameTitle">You’re connected</h2><p id="phaseMessage" class="muted">The host will start the round shortly.</p><div id="questionPrompt" class="prompt hide"></div><div id="questionRegion" class="region hide"></div><div id="optionGrid" class="grid"></div><div id="answerStatus" class="status" role="status">Waiting for the host…</div><button id="submitAnswer" class="btn primary hide" style="width:100%;margin-top:12px">Submit answer</button></div>
+    <div class="panel"><div class="eyebrow">Your team</div><h2 style="font-size:1.1rem">Live scoreboard</h2><div id="scoreList" class="muted">Scores appear when connected.</div></div>
+  </section>
+  <div class="foot">Your selected letter is sent only to the host. Other players cannot see your answer.</div>
+</main>
+<script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  const joinPanel=$('joinPanel'),gamePanel=$('gamePanel'),roomCode=$('roomCode'),playerPicker=$('playerPicker'),playerName=$('playerName'),joinError=$('joinError');
+  const socket=window.io();
+  let discoveredRoom='', joined=false, playerIndex=-1, playerDisplayName='', gameState=null, selectedOption=null, selectedQuestionId=null, timerDeadline=null, tickId=null;
+  const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const letters=['A','B','C','D'];
+  const initialRoom=new URLSearchParams(location.search).get('room')||'';
+  if(initialRoom)roomCode.value=initialRoom.slice(0,6);
+  function showError(message,bad=true){joinError.textContent=message;joinError.classList.remove('hide','good','bad');joinError.classList.add(bad?'bad':'good');}
+  function getRoomInfo(){
+    const code=roomCode.value.trim();
+    if(!/^\d{6}$/.test(code)){showError('Enter the six-digit room code.');return;}
+    socket.emit('player:room-info',{roomCode:code},response=>{
+      if(!response||!response.ok){showError(response&&response.error||'Could not find that room.');return;}
+      discoveredRoom=response.roomCode;playerName.innerHTML='<option value="">Select your name…</option>'+response.players.map(p=>'<option value="'+esc(p.name)+'" '+(p.connected?'disabled':'')+'>'+esc(p.name)+(p.connected?' · already connected':'')+'</option>').join('');
+      playerPicker.classList.remove('hide');showError('Room found. Choose your registered name.',false);
+      if(response.gameState){gameState=response.gameState;}
+    });
+  }
+  function joinGame(){
+    if(!discoveredRoom||!playerName.value){showError('Find a room and select your name first.');return;}
+    socket.emit('player:join',{roomCode:discoveredRoom,name:playerName.value},response=>{
+      if(!response||!response.ok){showError(response&&response.error||'Could not join this game.');return;}
+      joined=true;playerIndex=response.playerIndex;playerDisplayName=response.name;selectedOption=null;selectedQuestionId=null;
+      joinPanel.classList.add('hide');gamePanel.classList.remove('hide');
+      $('gameTitle').textContent='Welcome, '+playerDisplayName+'!';
+      $('phaseMessage').textContent='You are connected. Your answer will remain private.';
+      if(response.gameState)updateGame(response.gameState);
+      if(!tickId)tickId=setInterval(updateTimer,250);
+    });
+  }
+  function updateGame(data){
+    if(!data)return;
+    gameState=data;
+    if(data.questionId&&data.questionId!==selectedQuestionId){selectedOption=null;selectedQuestionId=data.questionId;}
+    const validQuestion=['QUESTION','REVEAL','TIEBREAKER'].includes(data.phase)&&data.prompt;
+    $('roundBadge').textContent=data.phase==='TIEBREAKER'?'⚡ Sudden-death tiebreaker':(data.roundName||'Team Detective Showdown');
+    $('gameTitle').textContent=data.phase==='QUESTION'?'Question '+data.questionNumber+' / '+data.totalQuestions:data.phase==='TIEBREAKER'?'Tiebreaker question':data.phase==='REVEAL'?'Answer revealed':data.phase==='ROUND_SUMMARY'?'Round scoreboard':data.phase==='FINALE'?'Final results':data.phase==='CALCULATING'?'Calculating results…':'Waiting for the host';
+    $('phaseMessage').textContent=data.phase==='ROUND_INTRO'?'The host is about to begin this round.':data.phase==='QUESTION'?'Choose one answer and submit it privately to the host. You can change it until the host locks the question.':data.phase==='REVEAL'?'The correct answer and explanation are now visible.':data.phase==='ROUND_SUMMARY'?'The host is reviewing the round scoreboard.':data.phase==='FINALE'?'The game is complete. Check the shared screen for awards and final results.':data.phase==='TIEBREAKER'?'Only players tied for first place may answer this question.':'The host is preparing the next screen.';
+    $('questionPrompt').textContent=validQuestion?data.prompt:'';$('questionPrompt').classList.toggle('hide',!validQuestion);
+    $('questionRegion').textContent=data.region?'🌍 '+data.region+(data.difficulty?' · '+data.difficulty:''):data.difficulty||'';$('questionRegion').classList.toggle('hide',!validQuestion||!data.region&&!data.difficulty);
+    const canPlayerAnswer=data.phase==='QUESTION'||data.phase==='TIEBREAKER';
+    const eligible=data.phase!=='TIEBREAKER'||!Array.isArray(data.eligiblePlayers)||data.eligiblePlayers.includes(playerIndex);
+    const open=!!data.acceptingAnswers&&!data.locked&&!data.paused&&eligible;
+    $('optionGrid').innerHTML=validQuestion?(data.options||[]).map((option,index)=>{
+      let cls='btn option';if(selectedOption===index)cls+=' selected';
+      if(data.correctIndex===index)cls+=' correct';else if(data.correctIndex!==null&&selectedOption===index)cls+=' wrong';
+      return '<button class="'+cls+'" type="button" data-option="'+index+'" '+(open?'':'disabled')+' aria-pressed="'+(selectedOption===index)+'"><span class="letter">'+letters[index]+'</span><span>'+esc(option)+'</span></button>';
+    }).join(''):'';
+    $('submitAnswer').classList.toggle('hide',!canPlayerAnswer||!open||selectedOption===null);
+    if(data.phase==='REVEAL'||data.phase==='TIEBREAKER'&&data.correctIndex!==null){
+      let result='The correct answer is '+letters[data.correctIndex]+': '+(data.options||[])[data.correctIndex]+'.';
+      if(selectedOption!==null)result+=' '+(selectedOption===data.correctIndex?'Your answer was correct.':'Your answer was not correct.');
+      if(data.explanation)result+=' '+data.explanation;
+      $('answerStatus').textContent=result;$('answerStatus').classList.remove('good','bad');$('answerStatus').classList.add(selectedOption===data.correctIndex?'good':'bad');
+    }else if(!eligible){
+      $('answerStatus').textContent='You are not in the first-place tie and cannot answer this tiebreaker.';$('answerStatus').classList.remove('good','bad');
+    }else if(selectedOption!==null){
+      $('answerStatus').textContent='Selected '+letters[selectedOption]+'. Tap Submit answer to send or update it.';$('answerStatus').classList.remove('bad');
+    }else if(data.phase==='QUESTION'||data.phase==='TIEBREAKER'){
+      $('answerStatus').textContent=open?'No answer submitted yet.':'Answering is paused or locked.';$('answerStatus').classList.remove('good','bad');
+    }else{$('answerStatus').textContent='Waiting for the host to advance.';$('answerStatus').classList.remove('good','bad');}
+    $('scoreList').innerHTML=Array.isArray(data.players)?data.players.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map((p,i)=>'<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #3b4655"><span>'+esc(p.avatar||'👤')+'</span><strong style="flex:1">'+esc(p.name)+'</strong><span style="font-weight:900">'+(Number(p.score)||0)+' pts</span></div>').join(''):'Scores appear when connected.';
+    timerDeadline=Date.now()+Math.max(0,Number(data.timeLeftMs)||0);updateTimer();
+  }
+  function updateTimer(){
+    const data=gameState;if(!data){$('timer').textContent='--:--';return;}
+    let ms=(data.paused||!['QUESTION','TIEBREAKER'].includes(data.phase))?Number(data.timeLeftMs)||0:Math.max(0,(timerDeadline||Date.now())-Date.now());
+    const secs=Math.ceil(ms/1000);$('timer').textContent=String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
+    if(ms<=0&&['QUESTION','TIEBREAKER'].includes(data.phase)){$('answerStatus').textContent='Time is up. Waiting for the host to reveal.';$('submitAnswer').classList.add('hide');document.querySelectorAll('[data-option]').forEach(b=>b.disabled=true);}
+  }
+  $('findRoom').addEventListener('click',getRoomInfo);$('joinButton').addEventListener('click',joinGame);
+  $('optionGrid').addEventListener('click',event=>{const button=event.target.closest('[data-option]');if(!button||!gameState||!gameState.acceptingAnswers)return;selectedOption=Number(button.dataset.option);updateGame(gameState);});
+  $('submitAnswer').addEventListener('click',()=>{
+    if(!joined||selectedOption===null||!gameState||!gameState.questionId)return;
+    socket.emit('player:answer',{optionIndex:selectedOption,questionId:gameState.questionId},response=>{
+      if(response&&response.ok){$('answerStatus').textContent='✓ '+response.message;$('answerStatus').classList.remove('bad');$('answerStatus').classList.add('good');}
+      else{$('answerStatus').textContent=response&&response.error||'Answer could not be sent.';$('answerStatus').classList.remove('good');$('answerStatus').classList.add('bad');}
+    });
+  });
+  socket.on('game:update',data=>{if(joined)updateGame(data);else if(data)gameState=data;});
+  socket.on('room:players',()=>{if(!joined&&discoveredRoom)getRoomInfo();});
+  socket.on('room:closed',()=>{if(joined){gamePanel.innerHTML='<div class="panel"><h2>Room closed</h2><p class="muted">The host has closed the game room. Ask them to start a new room.</p></div>';}});
+  socket.on('connect_error',()=>showError('Unable to connect. Check your internet connection and scan the host QR again.'));
+  if(initialRoom)setTimeout(getRoomInfo,250);
+  window.addEventListener('pagehide',()=>{if(tickId)clearInterval(tickId);});
+})();
+</script>
+</body>
+</html>
